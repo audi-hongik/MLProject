@@ -11,6 +11,7 @@ print(data)
 
 # Analysis : NAN값 있는 행 제거
 data_remove = data.dropna(axis=0)
+data_remove = data_remove.astype({'User_Score': 'float64'})
 # print(data_remove)
 # TODO : input 나누기
 # TODO : train, test 데이터 나누기
@@ -27,8 +28,6 @@ print(data_impute_mean)
 # Multiple Imputation : Imputation -> Analysis -> Pooling 과정 거쳐 데이터 보정
 # imputed_training = mice(data.to_numpy())
 # print(imputed_training)
-# float형태의 data만 가능
-# TODO: data string인거 숫자로 바꿔서 판단하도록 data 가공
 
 # KNN써서 data 보정
 # imputer_knn = KNNImputer(n_neighbors=5)
