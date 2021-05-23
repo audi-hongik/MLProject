@@ -4,7 +4,10 @@ import numpy as np
 import category_encoders as ce
 from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer, KNNImputer  # imputation library
-from impyute.imputation.cs import mice, fast_knn  # multiple imputation library
+from impyute.imputation.cs import mice, fast_knn  # multiple imputation librar
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error
+
 
 def mae(real_target, pred_target):
     return np.average(abs(real_target - pred_target))
@@ -23,13 +26,17 @@ original_data = original_data[original_data["Rating"].notnull()]
 original_data.drop(['Name', 'NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales', 'Developer'], axis=1, inplace=True)
 
 # 1.4 tbd값 있는 행 제거
-# data_remove = original_data.dropna(axis=0)
-# data_remove = original_data.astype({'User_Score': 'float64'})
+data_remove = original_data.dropna(axis=0)
 original_data = original_data.replace('tbd', np.NaN)
 
+
+# 1.7 String인 컬럼 변환
+original_data = original_data.astype({'User_Score': 'float64'})
+
 # 1.5 Null값의 보정
-imputer_knn = KNNImputer(n_neighbors=5)
+imputer_knn = KNNImputer(n_neighbors=7)
 numeric_subset = original_data[["Year_of_Release", "Global_Sales", "Critic_Score", "Critic_Count", "User_Score", "User_Count"]]
+data = numeric_subset.to_numpy()
 imputed_knn = imputer_knn.fit_transform(numeric_subset)
 imputed_knn = pd.DataFrame(imputed_knn)
 
@@ -40,14 +47,11 @@ categorical_subset = encoder.fit_transform(categorical_subset)
 categorical_subset = categorical_subset.reset_index()
 features = pd.concat([imputed_knn, categorical_subset], axis = 1)
 
-# 1.7 String인 컬럼 변환
-data_remove = original_data.astype({'User_Score': 'float64'})
 #
 # # 1.4 Platform, Genre, Rating에 대해서 one-hot encoding으로 변환
 # #print(data_remove["Platform"].unique(), data_remove["Genre"].unique(), data_remove["Rating"].unique())
-# numeric_subset = data_remove[[
-#     "1", "5", "6", "7", "8", "4"]]
-# categorical_subset = data_remove[["0", "2", "3", "9"]]
+# numeric_subset = data_remove[["Year_of_Release", "Global_Sales", "Critic_Score", "Critic_Count", "User_Score", "User_Count"]]
+# categorical_subset = data_remove[["Platform", "Genre", "Publisher", "Rating"]]
 #
 # encoder = ce.one_hot.OneHotEncoder()
 # categorical_subset = encoder.fit_transform(categorical_subset)
@@ -64,12 +68,19 @@ target = features[1].values
 x_train, x_test, y_train, y_test = train_test_split(data, target, test_size=0.3, random_state=0)
 
 # 3. knn regression
-regressor = KNeighborsRegressor(7, "distance")
+regressor = KNeighborsRegressor(5, "distance")
 regressor.fit(x_train, y_train)
 
 y_pred = regressor.predict(x_test)
 model_mae = mae(y_test, y_pred)
-print(y_test)
-print(y_pred)
 
 print(model_mae)
+
+# 4. Linear Regression
+mlr = LinearRegression()
+mlr.fit(x_train, y_train)
+
+y_predict = mlr.predict(x_test)
+mae = mean_absolute_error(y_test, y_predict)
+
+print(mae)
