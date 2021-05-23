@@ -44,7 +44,6 @@ imp_mean.fit(data)
 arr_imp_mean = imp_mean.transform(data)
 target_imp_mean = arr_imp_mean[:, 4:5]
 np.delete(arr_imp_mean, 4, axis=1)
-# print(target_imp_mean)
 
 imp_mean_test = list()
 imp_mean_train = list()
