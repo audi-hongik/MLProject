@@ -3,16 +3,19 @@ import os
 import pandas as pd  # data processing, CSV file I/O
 from sklearn.impute import SimpleImputer, KNNImputer  # imputation library
 from impyute.imputation.cs import mice, fast_knn  # multiple imputation library
+from sklearn.preprocessing import OneHotEncoder
+import category_encoders as ce
 
 data = pd.read_csv("Video_Games_Sales_as_at_22_Dec_2016.csv")
-# anxis =1 은 열을 삭제하겠다는 것을 뜻한다
-data.drop(['Name', 'NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales'], axis=1, inplace=True)
 target = data[['Global_Sales']]
+# anxis =1 은 열을 삭제하겠다는 것을 뜻한다
+# Replacing "tbd" values with np.nan and transforming column to float type
+data["User_Score"] = data["User_Score"].replace("tbd", np.nan).astype(float)
+data.drop(['Name', 'NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales'], axis=1, inplace=True)
 
 
 # Analysis : NAN값 있는 행 제거
 data_remove = data.dropna(axis=0)
-print(data_remove)
 remove_target = data_remove[['Global_Sales']]  # index 4
 data_remove.drop(['Global_Sales'], axis=1, inplace=True)
 # data_remove = data_remove.astype({'User_Score': 'float64'})
@@ -45,6 +48,11 @@ arr_imp_mean = imp_mean.transform(data)
 target_imp_mean = arr_imp_mean[:, 4:5]
 np.delete(arr_imp_mean, 4, axis=1)
 
+# data_remove = pd.DataFrame(arr_imp_mean)
+# data_remove.info()
+# print(data_remove)
+
+
 imp_mean_test = list()
 imp_mean_train = list()
 imp_target_test = list()
@@ -65,10 +73,17 @@ for i in range(target_imp_mean.size):
 
 # TODO : null값 컬럼들 enum으로 변경 후 반올림
 # print(data.isna().sum(axis=0))
-# nan이 있는 컬럼 보정필요 - year(269), genre(2), publisher(54), rating(6769)
-# 보정불필요 - critic_score, count(8582), user_score(6704), user_count(9129), developer(6623)
+# nan이 있는 컬럼 보정필요 - year(269), genre(2), publisher(54), rating(6769), developer(6623)
+# 보정불필요 - critic_score, count(8582), user_score(6704), user_count(9129)
+# s = data.dtypes == 'object'
+
 year_arr = np.array(data[['Year_of_Release']].dropna(axis=0))
 year_label = list()
+genre_arr = np.array(data[['Genre']].dropna(axis=0))
+encoder = ce.one_hot.OneHotEncoder()
+categorical_subset = encoder.fit_transform(genre_arr)
+# print(categorical_subset)
+
 # for i in range(year_arr.size):
 #     if year_arr[i]
 
