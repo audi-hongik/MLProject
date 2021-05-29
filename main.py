@@ -2,20 +2,22 @@ import numpy as np
 import os
 import pandas as pd  # data processing, CSV file I/O
 from sklearn.impute import SimpleImputer, KNNImputer  # imputation library
-from impyute.imputation.cs import mice, fast_knn  # multiple imputation library
+from impyute.imputation.cs import mice  # multiple imputation library
+from sklearn.preprocessing import OneHotEncoder
+import category_encoders as ce
 
 data = pd.read_csv("Video_Games_Sales_as_at_22_Dec_2016.csv")
-# anxis =1 은 열을 삭제하겠다는 것을 뜻한다
-data.drop(['Name', 'NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales'], axis=1, inplace=True)
 target = data[['Global_Sales']]
-
+# anxis =1 은 열을 삭제하겠다는 것을 뜻한다
+# Replacing "tbd" values
+data = data.replace("tbd", np.NaN)
+data.drop(['Name', 'NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales', 'Developer'], axis=1, inplace=True)
+data = data.astype({'User_Score': 'float64'})
 
 # Analysis : NAN값 있는 행 제거
 data_remove = data.dropna(axis=0)
-print(data_remove)
 remove_target = data_remove[['Global_Sales']]  # index 4
 data_remove.drop(['Global_Sales'], axis=1, inplace=True)
-# data_remove = data_remove.astype({'User_Score': 'float64'})
 
 rm_data_test = list()
 rm_data_train = list()
@@ -63,29 +65,69 @@ for i in range(target_imp_mean.size):
     else:
         imp_target_train.append(target_imp_mean[i])
 
-# TODO : null값 컬럼들 enum으로 변경 후 반올림
-# print(data.isna().sum(axis=0))
-# nan이 있는 컬럼 보정필요 - year(269), genre(2), publisher(54), rating(6769)
-# 보정불필요 - critic_score, count(8582), user_score(6704), user_count(9129), developer(6623)
-year_arr = np.array(data[['Year_of_Release']].dropna(axis=0))
-year_label = list()
-# for i in range(year_arr.size):
-#     if year_arr[i]
+# float형태의 data만 가능 => one hot encoding
+encoding_subset = data[["Platform", "Genre", "Publisher", "Rating"]]
+encoder = ce.one_hot.OneHotEncoder()
+encoding_subset = encoder.fit_transform(encoding_subset)
+encoding_subset = encoding_subset.reset_index()
 
 # TODO : Multiple Imputation : Imputation -> Analysis -> Pooling 과정 거쳐 데이터 보정
-# imputed_training = mice(data.to_numpy())
-# print(imputed_training)
+data_subset = data[["Year_of_Release", "Global_Sales", "Critic_Score", "Critic_Count", "User_Score", "User_Count"]]
+imp_mice = mice(data_subset.to_numpy())
+imp_mice = pd.DataFrame(imp_mice)
+mice_features = pd.concat([imp_mice, encoding_subset], axis=1)
 
-# TODO: KNN써서 data 보정
-# imputer_knn = KNNImputer(n_neighbors=5)
-# imputed_knn = imputer_knn.fit_transform(data)
-# print(imputed_knn)
+mice_data = mice_features.drop(1, axis=1).values
+mice_target = mice_features[1].values
 
-# imputed_knn2 = fast_knn(data, k=5);
-# print(imputed_knn2)
-# float형태의 data만 가능
+mice_test = list()
+mice_train = list()
+mice_target_test = list()
+mice_target_train = list()
 
-# Name, NA_Sales, EU_Sales, JP_Sales, Other_Sales 제외
-# Global_Sales 는 output
+# 16719 training data 13375, test data 3344 8:2 비율로 나눔
+for i in range(mice_data[:, :1].size):
+    if i % 5 == 4:
+        mice_test.append(mice_data[i, :])
+    else:
+        mice_train.append(mice_data[i, :])
 
-# print(data)
+for i in range(mice_target.size):
+    if i % 5 == 4:
+        mice_target_test.append(mice_target[i])
+    else:
+        mice_target_train.append(mice_target[i])
+print(mice_target_train)
+
+# KNN써서 data 보정
+# nan이 있는 컬럼 보정필요 - year(269), genre(2), publisher(54), rating(6769), developer(6623)
+# 보정불필요 - critic_score, count(8582), user_score(6704), user_count(9129)
+
+imputer_knn = KNNImputer(n_neighbors=5)
+data_subset = data[["Year_of_Release", "Global_Sales", "Critic_Score", "Critic_Count", "User_Score", "User_Count"]]
+imputed_knn = imputer_knn.fit_transform(data_subset.to_numpy())
+imputed_knn = pd.DataFrame(imputed_knn)
+knn_features = pd.concat([imputed_knn, encoding_subset], axis=1)
+
+knn_data = knn_features.drop(1, axis=1).values
+knn_target = knn_features[1].values
+
+imp_knn_test = list()
+imp_knn_train = list()
+imp_knn_target_test = list()
+imp_knn_target_train = list()
+
+# 16719 training data 13375, test data 3344 8:2 비율로 나눔
+for i in range(knn_data[:, :1].size):
+    if i % 5 == 4:
+        imp_knn_test.append(knn_data[i, :])
+    else:
+        imp_knn_train.append(knn_data[i, :])
+
+for i in range(knn_target.size):
+    if i % 5 == 4:
+        imp_knn_target_test.append(knn_target[i])
+    else:
+        imp_knn_target_train.append(knn_target[i])
+
+# print(imp_knn_target_train)
