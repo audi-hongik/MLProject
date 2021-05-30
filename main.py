@@ -7,6 +7,7 @@ from sklearn.preprocessing import OneHotEncoder
 import category_encoders as ce
 from sklearn.linear_model import Lasso
 from sklearn.metrics import mean_absolute_error, r2_score
+import matplotlib.pyplot as plt
 
 data = pd.read_csv("Video_Games_Sales_as_at_22_Dec_2016.csv")
 target = data[['Global_Sales']]
@@ -15,6 +16,14 @@ target = data[['Global_Sales']]
 data = data.replace("tbd", np.NaN)
 data.drop(['Name', 'NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales', 'Developer'], axis=1, inplace=True)
 data = data.astype({'User_Score': 'float64'})
+
+# float형태의 data만 가능 => one hot encoding
+data_subset = data[["Year_of_Release", "Global_Sales", "Critic_Score", "Critic_Count", "User_Score", "User_Count"]]
+encoding_subset = data[["Platform", "Genre", "Publisher", "Rating"]]
+encoder = ce.one_hot.OneHotEncoder()
+encoding_subset = encoder.fit_transform(encoding_subset)
+encoding_subset = encoding_subset.reset_index()
+data = pd.concat([data_subset, encoding_subset], axis=1)
 
 # Analysis : NAN값 있는 행 제거
 data_remove = data.dropna(axis=0)
@@ -67,14 +76,8 @@ for i in range(target_imp_mean.size):
     else:
         imp_target_train.append(target_imp_mean[i])
 
-# float형태의 data만 가능 => one hot encoding
-encoding_subset = data[["Platform", "Genre", "Publisher", "Rating"]]
-encoder = ce.one_hot.OneHotEncoder()
-encoding_subset = encoder.fit_transform(encoding_subset)
-encoding_subset = encoding_subset.reset_index()
 
-# TODO : Multiple Imputation : Imputation -> Analysis -> Pooling 과정 거쳐 데이터 보정
-data_subset = data[["Year_of_Release", "Global_Sales", "Critic_Score", "Critic_Count", "User_Score", "User_Count"]]
+# Multiple Imputation : Imputation -> Analysis -> Pooling 과정 거쳐 데이터 보정
 imp_mice = mice(data_subset.to_numpy())
 imp_mice = pd.DataFrame(imp_mice)
 mice_features = pd.concat([imp_mice, encoding_subset], axis=1)
@@ -99,14 +102,13 @@ for i in range(mice_target.size):
         mice_target_test.append(mice_target[i])
     else:
         mice_target_train.append(mice_target[i])
-print(mice_target_train)
+# print(mice_target_train)
 
 # KNN써서 data 보정
 # nan이 있는 컬럼 보정필요 - year(269), genre(2), publisher(54), rating(6769), developer(6623)
 # 보정불필요 - critic_score, count(8582), user_score(6704), user_count(9129)
 
 imputer_knn = KNNImputer(n_neighbors=5)
-data_subset = data[["Year_of_Release", "Global_Sales", "Critic_Score", "Critic_Count", "User_Score", "User_Count"]]
 imputed_knn = imputer_knn.fit_transform(data_subset.to_numpy())
 imputed_knn = pd.DataFrame(imputed_knn)
 knn_features = pd.concat([imputed_knn, encoding_subset], axis=1)
@@ -136,11 +138,40 @@ for i in range(knn_target.size):
 
 # Lasso
 model_lasso = Lasso(alpha=0.01)
-model_lasso.fit(imp_knn_train, imp_knn_target_train)
-pred_train_lasso= model_lasso.predict(imp_knn_train)
-print(mean_absolute_error(imp_knn_target_train,pred_train_lasso))
-print(r2_score(imp_knn_target_train, pred_train_lasso))
+# model_lasso.fit(rm_data_train, rm_target_train)
+# pred_train_lasso= model_lasso.predict(rm_data_train)
+# pred_test_lasso = model_lasso.predict(rm_data_test)
+# print(mean_absolute_error(rm_target_test,pred_test_lasso))
+# print(r2_score(rm_target_test, pred_test_lasso))
+#
+# model_lasso.fit(imp_mean_train, imp_target_train)
+# pred_train_lasso= model_lasso.predict(imp_mean_train)
+# pred_test_lasso = model_lasso.predict(imp_mean_test)
+# print(mean_absolute_error(imp_target_test,pred_test_lasso))
+# print(r2_score(imp_target_test, pred_test_lasso))
 
-pred_test_lasso= model_lasso.predict(imp_knn_test)
-print(mean_absolute_error(imp_knn_target_test,pred_test_lasso))
-print(r2_score(imp_knn_target_test, pred_test_lasso))
+# model_lasso.fit(imp_knn_train, imp_knn_target_train)
+# pred_train_lasso= model_lasso.predict(imp_knn_train)
+# pred_test_lasso = model_lasso.predict(imp_knn_test)
+# print(mean_absolute_error(imp_knn_target_test,pred_test_lasso))
+# print(r2_score(imp_knn_target_test, pred_test_lasso))
+#
+# plt.scatter(imp_knn_target_test, pred_test_lasso)
+# plt.grid()
+# plt.xlabel('Actual y')
+# plt.ylabel('Predicted y')
+# plt.title('Scatter plot between actual y and predicted y')
+# plt.show()
+
+# model_lasso.fit(mice_train, mice_target_train)
+# pred_train_lasso= model_lasso.predict(mice_train)
+# pred_test_lasso = model_lasso.predict(mice_test)
+# print(mean_absolute_error(mice_target_test,pred_test_lasso))
+# print(r2_score(mice_target_test, pred_test_lasso))
+#
+# plt.scatter(mice_target_test, pred_test_lasso)
+# plt.grid()
+# plt.xlabel('Actual y')
+# plt.ylabel('Predicted y')
+# plt.title('Scatter plot between actual y and predicted y')
+# plt.show()
