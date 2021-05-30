@@ -5,6 +5,8 @@ from sklearn.impute import SimpleImputer, KNNImputer  # imputation library
 from impyute.imputation.cs import mice  # multiple imputation library
 from sklearn.preprocessing import OneHotEncoder
 import category_encoders as ce
+from sklearn.linear_model import Lasso
+from sklearn.metrics import mean_absolute_error, r2_score
 
 data = pd.read_csv("Video_Games_Sales_as_at_22_Dec_2016.csv")
 target = data[['Global_Sales']]
@@ -131,3 +133,14 @@ for i in range(knn_target.size):
         imp_knn_target_train.append(knn_target[i])
 
 # print(imp_knn_target_train)
+
+# Lasso
+model_lasso = Lasso(alpha=0.01)
+model_lasso.fit(imp_knn_train, imp_knn_target_train)
+pred_train_lasso= model_lasso.predict(imp_knn_train)
+print(mean_absolute_error(imp_knn_target_train,pred_train_lasso))
+print(r2_score(imp_knn_target_train, pred_train_lasso))
+
+pred_test_lasso= model_lasso.predict(imp_knn_test)
+print(mean_absolute_error(imp_knn_target_test,pred_test_lasso))
+print(r2_score(imp_knn_target_test, pred_test_lasso))
