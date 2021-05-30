@@ -30,57 +30,74 @@ data_remove = original_data.dropna(axis=0)
 original_data = original_data.replace('tbd', np.NaN)
 
 
-# 1.7 String인 컬럼 변환
+# 1.5 String인 컬럼 변환
 original_data = original_data.astype({'User_Score': 'float64'})
-
-# 1.5 Null값의 보정
-imputer_knn = KNNImputer(n_neighbors=7)
-numeric_subset = original_data[["Year_of_Release", "Global_Sales", "Critic_Score", "Critic_Count", "User_Score", "User_Count"]]
-data = numeric_subset.to_numpy()
-imputed_knn = imputer_knn.fit_transform(numeric_subset)
-imputed_knn = pd.DataFrame(imputed_knn)
 
 # 1.6 원핫 인코딩으로 라벨링
 categorical_subset = original_data[["Platform", "Genre", "Publisher", "Rating"]]
 encoder = ce.one_hot.OneHotEncoder()
 categorical_subset = encoder.fit_transform(categorical_subset)
 categorical_subset = categorical_subset.reset_index()
-features = pd.concat([imputed_knn, categorical_subset], axis = 1)
 
-#
-# # 1.4 Platform, Genre, Rating에 대해서 one-hot encoding으로 변환
-# #print(data_remove["Platform"].unique(), data_remove["Genre"].unique(), data_remove["Rating"].unique())
-# numeric_subset = data_remove[["Year_of_Release", "Global_Sales", "Critic_Score", "Critic_Count", "User_Score", "User_Count"]]
-# categorical_subset = data_remove[["Platform", "Genre", "Publisher", "Rating"]]
-#
-# encoder = ce.one_hot.OneHotEncoder()
-# categorical_subset = encoder.fit_transform(categorical_subset)
-#
-# features = pd.concat([numeric_subset, categorical_subset], axis = 1)
 
+datasets = {}
+# 방법1> Null값 아예 제외
+# data_remove = original_data.dropna(axis=0)
+# datasets["data_null"] = data_null
+
+# # 방법2> 평균값(대표값)을 사용하여 데이터 보정
+# imp_mean = SimpleImputer(strategy='most_frequent')  # mean, median
+# mean_subset = original_data[["Year_of_Release", "Global_Sales", "Critic_Score", "Critic_Count", "User_Score", "User_Count"]]
+# data = mean_subset.to_numpy()
+# imp_mean.fit(mean_subset)
+# arr_imp_mean = imp_mean.transform(mean_subset)
+# data_mean = pd.concat([arr_imp_mean, categorical_subset], axis = 1)
+# datasets["data_mean"] = data_mean
+
+# 방법3> KNN imputer
+imp_knn = KNNImputer(n_neighbors=7)
+numeric_subset = original_data[["Year_of_Release", "Global_Sales", "Critic_Score", "Critic_Count", "User_Score", "User_Count"]]
+imp_knn = imp_knn.fit_transform(numeric_subset)
+imp_knn = pd.DataFrame(imp_knn)
+data_knn = pd.concat([imp_knn, categorical_subset], axis = 1)
+datasets["data_knn"] = data_knn
+
+# 방법4> Multiple imputer
+data_subset = original_data[["Year_of_Release", "Global_Sales", "Critic_Score", "Critic_Count", "User_Score", "User_Count"]]
+imp_mice = mice(data_subset.to_numpy())
+imp_mice = pd.DataFrame(imp_mice)
+data_mice = pd.concat([imp_mice, categorical_subset], axis = 1)
+datasets["data_mice"] = data_mice
 
 # 2. 데이터 분리
-# 2.1 data와 target 분리
-data = features.drop(1, axis=1).values
-target = features[1].values
+for key, imputed_data in datasets.items():
+    print("****"+key+"****")
 
-# 2.2 test data와 training data 분리
-x_train, x_test, y_train, y_test = train_test_split(data, target, test_size=0.3, random_state=0)
+    # 2.1 data와 target 분리
+    if key == "data_null":
+        data = imputed_data.drop("Global_sales", axis=1).values
+        target = imputed_data["Global_sales"].values
+    else:
+        data = imputed_data.drop(1, axis=1).values
+        target = imputed_data[1].values
 
-# 3. knn regression
-regressor = KNeighborsRegressor(5, "distance")
-regressor.fit(x_train, y_train)
+    # 2.2 test data와 training data 분리
+    x_train, x_test, y_train, y_test = train_test_split(data, target, test_size=0.3, random_state=0)
 
-y_pred = regressor.predict(x_test)
-model_mae = mae(y_test, y_pred)
+    # 3. knn regression
+    regressor = KNeighborsRegressor(5, "distance")
+    regressor.fit(x_train, y_train)
 
-print(model_mae)
+    y_pred = regressor.predict(x_test)
+    mae_knn = mae(y_test, y_pred)
 
-# 4. Linear Regression
-mlr = LinearRegression()
-mlr.fit(x_train, y_train)
+    print(mae_knn)
 
-y_predict = mlr.predict(x_test)
-mae = mean_absolute_error(y_test, y_predict)
+    # 4. Linear Regression
+    mlr = LinearRegression()
+    mlr.fit(x_train, y_train)
 
-print(mae)
+    y_predict = mlr.predict(x_test)
+    mse_mlr = mean_absolute_error(y_test, y_predict)
+
+    print(mse_mlr)
