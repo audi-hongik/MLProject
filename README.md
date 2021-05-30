@@ -11,7 +11,7 @@ Activate virtual environment
 `source venv/bin/activate`
 
 ### 2. 필요한 라이브러리 설치
-`pip install requirements.txt`
+`pip install -r requirements.txt`
 
 ## 3. 실행
 `python3 main.py`
