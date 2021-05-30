@@ -6,7 +6,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer, KNNImputer  # imputation library
 from impyute.imputation.cs import mice, fast_knn  # multiple imputation librar
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_absolute_error
+from sklearn.linear_model import Lasso
+from sklearn.metrics import mean_absolute_error, r2_score
 
 
 def mae(real_target, pred_target):
@@ -41,20 +42,8 @@ categorical_subset = categorical_subset.reset_index()
 
 
 datasets = {}
-# 방법1> Null값 아예 제외
-# data_remove = original_data.dropna(axis=0)
-# datasets["data_null"] = data_null
 
-# # 방법2> 평균값(대표값)을 사용하여 데이터 보정
-# imp_mean = SimpleImputer(strategy='most_frequent')  # mean, median
-# mean_subset = original_data[["Year_of_Release", "Global_Sales", "Critic_Score", "Critic_Count", "User_Score", "User_Count"]]
-# data = mean_subset.to_numpy()
-# imp_mean.fit(mean_subset)
-# arr_imp_mean = imp_mean.transform(mean_subset)
-# data_mean = pd.concat([arr_imp_mean, categorical_subset], axis = 1)
-# datasets["data_mean"] = data_mean
-
-# 방법3> KNN imputer
+# 방법1> KNN imputer
 imp_knn = KNNImputer(n_neighbors=7)
 numeric_subset = original_data[["Year_of_Release", "Global_Sales", "Critic_Score", "Critic_Count", "User_Score", "User_Count"]]
 imp_knn = imp_knn.fit_transform(numeric_subset)
@@ -62,7 +51,7 @@ imp_knn = pd.DataFrame(imp_knn)
 data_knn = pd.concat([imp_knn, categorical_subset], axis = 1)
 datasets["data_knn"] = data_knn
 
-# 방법4> Multiple imputer
+# 방법2> Multiple imputer
 data_subset = original_data[["Year_of_Release", "Global_Sales", "Critic_Score", "Critic_Count", "User_Score", "User_Count"]]
 imp_mice = mice(data_subset.to_numpy())
 imp_mice = pd.DataFrame(imp_mice)
@@ -85,19 +74,29 @@ for key, imputed_data in datasets.items():
     x_train, x_test, y_train, y_test = train_test_split(data, target, test_size=0.3, random_state=0)
 
     # 3. knn regression
-    regressor = KNeighborsRegressor(5, "distance")
+    print("KNN regression")
+    regressor = KNeighborsRegressor(7, "distance")
     regressor.fit(x_train, y_train)
-
     y_pred = regressor.predict(x_test)
     mae_knn = mae(y_test, y_pred)
-
-    print(mae_knn)
+    print("MAE: ", mae_knn)
+    print("R^2: ", r2_score(y_test, y_pred))
 
     # 4. Linear Regression
+    print("Linear Regression")
     mlr = LinearRegression()
     mlr.fit(x_train, y_train)
 
     y_predict = mlr.predict(x_test)
-    mse_mlr = mean_absolute_error(y_test, y_predict)
+    mae_mlr = mae(y_test, y_predict)
+    print("MAE: ", mae_mlr)
+    print("R^2: ", r2_score(y_test, y_predict))
 
-    print(mse_mlr)
+    # 5. Lasso Regression
+    print("Lasso Regression")
+    model_lasso = Lasso(alpha=0.01)
+    model_lasso.fit(x_train, y_train)
+
+    pred_test_lasso = model_lasso.predict(x_test)
+    print("MAE: ", mean_absolute_error(y_test, pred_test_lasso))
+    print("R^2: ", r2_score(y_test, pred_test_lasso))
