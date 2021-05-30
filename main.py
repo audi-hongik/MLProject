@@ -8,6 +8,11 @@ import category_encoders as ce
 from sklearn.linear_model import Lasso
 from sklearn.metrics import mean_absolute_error, r2_score
 import matplotlib.pyplot as plt
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+
+
 
 data = pd.read_csv("Video_Games_Sales_as_at_22_Dec_2016.csv")
 target = data[['Global_Sales']]
@@ -90,7 +95,7 @@ mice_train = list()
 mice_target_test = list()
 mice_target_train = list()
 
-# 16719 training data 13375, test data 3344 8:2 비율로 나눔
+16719 training data 13375, test data 3344 8:2 비율로 나눔
 for i in range(mice_data[:, :1].size):
     if i % 5 == 4:
         mice_test.append(mice_data[i, :])
@@ -102,7 +107,6 @@ for i in range(mice_target.size):
         mice_target_test.append(mice_target[i])
     else:
         mice_target_train.append(mice_target[i])
-# print(mice_target_train)
 
 # KNN써서 data 보정
 # nan이 있는 컬럼 보정필요 - year(269), genre(2), publisher(54), rating(6769), developer(6623)
@@ -138,37 +142,30 @@ for i in range(knn_target.size):
 
 # Lasso
 model_lasso = Lasso(alpha=0.01)
-# model_lasso.fit(rm_data_train, rm_target_train)
-# pred_train_lasso= model_lasso.predict(rm_data_train)
-# pred_test_lasso = model_lasso.predict(rm_data_test)
+model_lasso.fit(rm_data_train, rm_target_train)
+pred_train_lasso= model_lasso.predict(rm_data_train)
+pred_test_lasso = model_lasso.predict(rm_data_test)
 # print(mean_absolute_error(rm_target_test,pred_test_lasso))
 # print(r2_score(rm_target_test, pred_test_lasso))
-#
-# model_lasso.fit(imp_mean_train, imp_target_train)
-# pred_train_lasso= model_lasso.predict(imp_mean_train)
-# pred_test_lasso = model_lasso.predict(imp_mean_test)
+
+model_lasso.fit(imp_mean_train, imp_target_train)
+pred_train_lasso= model_lasso.predict(imp_mean_train)
+pred_test_lasso = model_lasso.predict(imp_mean_test)
 # print(mean_absolute_error(imp_target_test,pred_test_lasso))
 # print(r2_score(imp_target_test, pred_test_lasso))
 
-# model_lasso.fit(imp_knn_train, imp_knn_target_train)
-# pred_train_lasso= model_lasso.predict(imp_knn_train)
-# pred_test_lasso = model_lasso.predict(imp_knn_test)
+model_lasso.fit(imp_knn_train, imp_knn_target_train)
+pred_train_lasso= model_lasso.predict(imp_knn_train)
+pred_test_lasso = model_lasso.predict(imp_knn_test)
 # print(mean_absolute_error(imp_knn_target_test,pred_test_lasso))
 # print(r2_score(imp_knn_target_test, pred_test_lasso))
-#
-# plt.scatter(imp_knn_target_test, pred_test_lasso)
-# plt.grid()
-# plt.xlabel('Actual y')
-# plt.ylabel('Predicted y')
-# plt.title('Scatter plot between actual y and predicted y')
-# plt.show()
 
-# model_lasso.fit(mice_train, mice_target_train)
-# pred_train_lasso= model_lasso.predict(mice_train)
-# pred_test_lasso = model_lasso.predict(mice_test)
+model_lasso.fit(mice_train, mice_target_train)
+pred_train_lasso= model_lasso.predict(mice_train)
+pred_test_lasso = model_lasso.predict(mice_test)
 # print(mean_absolute_error(mice_target_test,pred_test_lasso))
 # print(r2_score(mice_target_test, pred_test_lasso))
-#
+
 # plt.scatter(mice_target_test, pred_test_lasso)
 # plt.grid()
 # plt.xlabel('Actual y')

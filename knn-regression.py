@@ -7,6 +7,7 @@ from sklearn.impute import SimpleImputer, KNNImputer  # imputation library
 from impyute.imputation.cs import mice, fast_knn  # multiple imputation librar
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import mean_absolute_error, r2_score
 
 
 def mae(real_target, pred_target):
@@ -55,7 +56,7 @@ datasets = {}
 # datasets["data_mean"] = data_mean
 
 # 방법3> KNN imputer
-imp_knn = KNNImputer(n_neighbors=7)
+imp_knn = KNNImputer(n_neighbors=10)
 numeric_subset = original_data[["Year_of_Release", "Global_Sales", "Critic_Score", "Critic_Count", "User_Score", "User_Count"]]
 imp_knn = imp_knn.fit_transform(numeric_subset)
 imp_knn = pd.DataFrame(imp_knn)
@@ -85,13 +86,14 @@ for key, imputed_data in datasets.items():
     x_train, x_test, y_train, y_test = train_test_split(data, target, test_size=0.3, random_state=0)
 
     # 3. knn regression
-    regressor = KNeighborsRegressor(5, "distance")
+    regressor = KNeighborsRegressor(10, "distance")
     regressor.fit(x_train, y_train)
 
     y_pred = regressor.predict(x_test)
     mae_knn = mae(y_test, y_pred)
 
     print(mae_knn)
+    print(r2_score(y_test, y_pred))
 
     # 4. Linear Regression
     mlr = LinearRegression()
